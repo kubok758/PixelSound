@@ -52,10 +52,11 @@
 
         <div class="controlGroup">
           <div class="labelRow">
-            <label for="resolution">Разрешение сжатия</label>
-            <b><span id="resolutionValue">40</span> px</b>
+            <label for="resolution">Пиксели анализа</label>
+            <b><span id="resolutionValue">80</span> px</b>
           </div>
-          <input id="resolution" type="range" min="16" max="96" value="40" step="1" />
+          <input id="resolution" type="range" min="16" max="512" value="80" step="1" />
+          <div class="rangeMarks"><span>16</span><span>128</span><span>256</span><span>512</span></div>
         </div>
 
         <div class="controlGroup">
@@ -64,6 +65,15 @@
             <b><span id="durationValue">45</span> сек</b>
           </div>
           <input id="duration" type="range" min="12" max="140" value="45" step="1" />
+        </div>
+
+        <div class="controlGroup">
+          <label for="detailMode">Детализация</label>
+          <select id="detailMode">
+            <option value="fast">Быстро</option>
+            <option value="normal" selected>Детально</option>
+            <option value="photo">Фото-режим</option>
+          </select>
         </div>
 
         <div class="controlGroup">
@@ -80,7 +90,7 @@
         </div>
 
         <button class="primaryBtn" id="convertBtn" type="button">Начать конвертацию</button>
-        <p class="hint">На iPad лучше ставить 32–48 px, чтобы рендер был быстрый и без лагов.</p>
+        <p class="hint">Для обычного фото ставь 128–256 px. Если хочешь почти как исходник — 384–512 px + «Фото-режим», но рендер будет дольше.</p>
       </div>
 
       <div class="panel resultPanel">
@@ -143,7 +153,7 @@
         <article class="infoCard">
           <span>01</span>
           <h3>Сжатие</h3>
-          <p>Картинка уменьшается до выбранного размера, чтобы браузер не умирал от миллионов пикселей.</p>
+          <p>Картинка уменьшается до выбранного размера. Теперь можно ставить до 512 px и получать намного больше нот.</p>
         </article>
         <article class="infoCard">
           <span>02</span>

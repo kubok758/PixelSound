@@ -224,6 +224,14 @@ input[type="range"] {
   width: 100%;
   accent-color: #fff;
 }
+.rangeMarks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  color: var(--muted2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 select {
   margin-top: 8px;
   width: 100%;

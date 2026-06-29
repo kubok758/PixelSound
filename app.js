@@ -18,6 +18,7 @@
     resolutionValue: $('resolutionValue'),
     duration: $('duration'),
     durationValue: $('durationValue'),
+    detailMode: $('detailMode'),
     instrument: $('instrument'),
     convertBtn: $('convertBtn'),
     emptyState: $('emptyState'),
@@ -57,7 +58,9 @@
     notes: [],
     imageDataUrl: '',
     fileName: '',
-    duration: 0
+    duration: 0,
+    detailKey: 'normal',
+    visualMax: 3200
   };
 
   const instruments = {
@@ -71,6 +74,46 @@
   };
 
   const scale = [0, 2, 3, 5, 7, 8, 10]; // C minor-ish
+
+  const detailProfiles = {
+    fast: {
+      name: 'Быстро',
+      maxHeight: 260,
+      maxPixels: 90000,
+      minScore: .13,
+      baseDensity: 2,
+      maxDensity: 5,
+      minGapDiv: 15,
+      audioMax: 1700,
+      midiMax: 2600,
+      visualMax: 2400
+    },
+    normal: {
+      name: 'Детально',
+      maxHeight: 520,
+      maxPixels: 190000,
+      minScore: .10,
+      baseDensity: 3,
+      maxDensity: 8,
+      minGapDiv: 21,
+      audioMax: 2800,
+      midiMax: 5200,
+      visualMax: 4200
+    },
+    photo: {
+      name: 'Фото-режим',
+      maxHeight: 720,
+      maxPixels: 420000,
+      minScore: .07,
+      baseDensity: 4,
+      maxDensity: 12,
+      minGapDiv: 30,
+      audioMax: 4200,
+      midiMax: 9000,
+      visualMax: 8500
+    }
+  };
+
 
   init();
 
@@ -128,7 +171,7 @@
     });
     window.addEventListener('resize', debounce(() => {
       drawStars();
-      if (current.notes.length) drawPianoRoll(current.notes, current.duration);
+      if (current.notes.length) drawPianoRoll(current.notes, current.duration, current.visualMax);
     }, 120));
   }
 
@@ -174,20 +217,21 @@
       const resolution = Number(els.resolution.value);
       const duration = Number(els.duration.value);
       const instrumentKey = els.instrument.value;
+      const detailKey = els.detailMode.value;
 
       setProgress(16, 'Сжимаю пиксели…');
       await nextFrame();
-      const analysis = analyzeImage(img, resolution, duration);
+      const analysis = analyzeImage(img, resolution, duration, detailKey);
       const notes = analysis.notes;
       if (!notes.length) throw new Error('В картинке почти нет контраста. Попробуй другое фото или увеличь разрешение.');
 
       setProgress(38, `Создаю ${notes.length} нот…`);
       await nextFrame();
-      const midiBlob = makeMidi(notes, instrumentKey, duration);
+      const midiBlob = makeMidi(notes, instrumentKey, duration, detailKey);
 
       setProgress(56, 'Синтезирую аудио…');
       await nextFrame();
-      const audioBuffer = await renderAudio(notes, instrumentKey, duration, (p) => setProgress(56 + Math.round(p * 34), 'Синтезирую аудио…'));
+      const audioBuffer = await renderAudio(notes, instrumentKey, duration, detailKey, (p) => setProgress(56 + Math.round(p * 34), 'Синтезирую аудио…'));
 
       setProgress(93, 'Кодирую WAV…');
       await nextFrame();
@@ -203,11 +247,13 @@
         notes,
         imageDataUrl: imageUrl,
         fileName: current.fileName || selectedFile?.name || 'track',
-        duration
+        duration,
+        detailKey,
+        visualMax: analysis.visualMax
       };
 
       setProgress(100, 'Готово');
-      showResult(analysis, instrumentKey);
+      showResult(analysis, instrumentKey, detailKey);
       addHistory(current, instrumentKey, analysis);
       incrementCounter();
     } catch (err) {
@@ -220,10 +266,21 @@
     }
   }
 
-  function analyzeImage(img, targetWidth, duration) {
+  function analyzeImage(img, targetWidth, duration, detailKey) {
+    const profile = detailProfiles[detailKey] || detailProfiles.normal;
     const ratio = img.naturalHeight / Math.max(1, img.naturalWidth);
-    const w = targetWidth;
-    const h = Math.max(16, Math.min(112, Math.round(targetWidth * ratio)));
+    let w = Math.max(16, Math.round(targetWidth));
+    let h = Math.max(16, Math.round(w * ratio));
+    if (h > profile.maxHeight) {
+      h = profile.maxHeight;
+      w = Math.max(16, Math.round(h / Math.max(.01, ratio)));
+    }
+    const pixels = w * h;
+    if (pixels > profile.maxPixels) {
+      const scaleDown = Math.sqrt(profile.maxPixels / pixels);
+      w = Math.max(16, Math.round(w * scaleDown));
+      h = Math.max(16, Math.round(h * scaleDown));
+    }
     const cnv = document.createElement('canvas');
     cnv.width = w;
     cnv.height = h;
@@ -253,7 +310,7 @@
         totalBright += bright;
         totalSat += sat;
         count++;
-        if (score > 0.12) candidates.push({ x, y, r, g, b, bright, sat, score });
+        if (score > profile.minScore) candidates.push({ x, y, r, g, b, bright, sat, score });
       }
       candidates.sort((a, b) => b.score - a.score);
       columns.push(candidates);
@@ -261,15 +318,15 @@
 
     const avgBright = totalBright / Math.max(1, count);
     const avgSat = totalSat / Math.max(1, count);
-    const densityTarget = Math.max(2, Math.min(7, Math.round(2 + avgSat * 4 + avgBright * 2)));
+    const densityTarget = Math.max(2, Math.min(profile.maxDensity, Math.round(profile.baseDensity + avgSat * 5 + avgBright * 3)));
     const notes = [];
     const step = duration / w;
-    const minGapY = Math.max(2, Math.floor(h / 18));
+    const minGapY = Math.max(1, Math.floor(h / profile.minGapDiv));
 
     for (let x = 0; x < w; x++) {
       const chosen = [];
       const pool = columns[x];
-      const threshold = Math.max(0.16, avgBright * .62 + avgSat * .12);
+      const threshold = Math.max(profile.minScore, avgBright * .50 + avgSat * .08);
       for (const p of pool) {
         if (chosen.length >= densityTarget) break;
         if (p.score < threshold && chosen.length >= 1) continue;
@@ -288,7 +345,7 @@
     }
 
     notes.sort((a, b) => a.time - b.time || a.midi - b.midi);
-    return { notes, width: w, height: h, avgBright, avgSat, thumb: cnv.toDataURL('image/png') };
+    return { notes, width: w, height: h, avgBright, avgSat, thumb: cnv.toDataURL('image/png'), detailName: profile.name, audioMax: profile.audioMax, midiMax: profile.midiMax, visualMax: profile.visualMax }; 
   }
 
   function edgeScore(data, w, h, x, y) {
@@ -311,7 +368,7 @@
     return clamp(Math.round(midi), 33, 92);
   }
 
-  async function renderAudio(notes, instrumentKey, duration, onProgress) {
+  async function renderAudio(notes, instrumentKey, duration, detailKey, onProgress) {
     const sampleRate = 44100;
     const ctx = new OfflineCtx(2, Math.ceil((duration + 3) * sampleRate), sampleRate);
     const master = ctx.createGain();
@@ -328,7 +385,8 @@
     compressor.connect(ctx.destination);
 
     const inst = instruments[instrumentKey] || instruments.piano;
-    const maxNotes = Math.min(notes.length, 1400); // защита от смерти на мобилках
+    const profile = detailProfiles[detailKey] || detailProfiles.normal;
+    const maxNotes = Math.min(notes.length, profile.audioMax); // защита от смерти на мобилках, но с фото-режимом нот больше
     const selected = downsampleNotes(notes, maxNotes);
 
     for (let i = 0; i < selected.length; i++) {
@@ -403,14 +461,15 @@
     return 2.2;
   }
 
-  function makeMidi(notes, instrumentKey, duration) {
+  function makeMidi(notes, instrumentKey, duration, detailKey) {
     const ticksPerBeat = 480;
     const bpm = 120;
     const ticksPerSecond = ticksPerBeat * bpm / 60;
     const inst = instruments[instrumentKey] || instruments.piano;
+    const profile = detailProfiles[detailKey] || detailProfiles.normal;
     const events = [];
     events.push({ tick: 0, data: [0xC0, inst.midi] });
-    const selected = downsampleNotes(notes, 2200);
+    const selected = downsampleNotes(notes, profile.midiMax);
     for (const n of selected) {
       const start = Math.max(0, Math.round(n.time * ticksPerSecond));
       const end = Math.max(start + 20, Math.round((n.time + n.duration) * ticksPerSecond));
@@ -471,19 +530,20 @@
     return new Blob([view], { type: 'audio/wav' });
   }
 
-  function showResult(analysis, instrumentKey) {
+  function showResult(analysis, instrumentKey, detailKey) {
     els.player.classList.remove('hidden');
     els.emptyState.classList.add('hidden');
     els.trackThumb.src = current.imageDataUrl || analysis.thumb;
     els.trackTitle.textContent = `${safeBase(current.fileName)}.wav`;
-    els.trackStats.textContent = `${analysis.notes.length} нот • ${analysis.width}×${analysis.height}px • ${instruments[instrumentKey].name}`;
+    const rendered = Math.min(analysis.notes.length, analysis.audioMax);
+    els.trackStats.textContent = `${analysis.notes.length} нот • аудио ${rendered} • ${analysis.width}×${analysis.height}px • ${analysis.detailName} • ${instruments[instrumentKey].name}`;
     els.audio.src = current.audioUrl;
     els.timeTotal.textContent = formatTime(current.duration);
     els.playBtn.textContent = '▶';
-    drawPianoRoll(analysis.notes, current.duration);
+    drawPianoRoll(analysis.notes, current.duration, analysis.visualMax);
   }
 
-  function drawPianoRoll(notes, duration) {
+  function drawPianoRoll(notes, duration, visualMax = 3200) {
     const canvas = els.pianoRoll;
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const rect = canvas.getBoundingClientRect();
@@ -507,7 +567,7 @@
 
     const minMidi = 32;
     const maxMidi = 96;
-    const visible = downsampleNotes(notes, 1800);
+    const visible = downsampleNotes(notes, visualMax);
     for (const n of visible) {
       const x = (n.time / duration) * w;
       const nw = Math.max(2 * dpr, (n.duration / duration) * w);
