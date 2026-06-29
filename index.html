@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary SEO Meta Tags -->
+    <title>PixelSound — Конвертер фото в музыку онлайн</title>
+    <meta name="title" content="PixelSound — Конвертер фото в музыку онлайн">
+    <meta name="description" content="Конвертируйте фотографии в уникальные MIDI- и аудио-композиции с помощью PixelSound. Настройте разрешение сжатия, выберите инструмент и слушайте музыку вашего изображения.">
+    <meta name="keywords" content="фото в midi, картинка в музыку, музыка из фото, midi конвертер, png в mp3, онлайн конвертация">
+    <meta name="robots" content="index, follow">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="static/style.css">
+</head>
+
+<body>
+    <canvas id="ambient-canvas"></canvas>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <svg class="logo-svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.58 20 4 16.42 4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20ZM9 17H11V10H9V17ZM13 17H15V7H13V17Z"
+                        fill="currentColor" />
+                </svg>
+                <span class="logo-text">PixelSound</span>
+            </div>
+            <nav class="header-nav" style="display: flex; align-items: center; gap: 1rem;">
+                <span id="conversion-stats" class="stats-label"
+                    style="font-size: 0.8rem; color: var(--text-secondary); border: 1px solid var(--card-border); padding: 0.35rem 0.75rem; border-radius: var(--border-radius); display: none; font-family: var(--font-mono);">Конвертировано:
+                    ...</span>
+            </nav>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <section class="hero-section">
+            <h1 class="hero-title">png в mp3</h1>
+            <p class="hero-subtitle">Загрузите файл для преобразования фото в музыку.</p>
+        </section>
+        <section id="converter" class="converter-section">
+            <div class="converter-card">
+                <form id="upload-form" class="upload-form">
+                    <div class="drop-zone" id="drop-zone">
+                        <input type="file" id="file-input" name="file" accept="image/*" required class="file-input">
+                        <div class="drop-zone-content">
+                            <svg class="upload-icon-svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04ZM19 18H6C3.79 18 2 16.21 2 14C2 11.95 3.53 10.24 5.56 10.03L6.63 9.92L7.13 8.97C8.08 7.14 9.94 6 12 6C14.89 6 17.39 8.01 17.85 10.87L18.06 12.15L19.35 12.24C20.88 12.35 22 13.55 22 15C22 16.65 20.65 18 19 18ZM8 13H10.55V16H13.45V13H16L12 9L8 13Z"
+                                    fill="currentColor" />
+                            </svg>
+                            <p class="drop-zone-text">Перетащите сюда фото или нажмите для выбора</p>
+                            <span class="drop-zone-sub">PNG, JPG, WEBP</span>
+                        </div>
+                        <div class="preview-container" id="preview-container" style="display: none;">
+                            <img id="image-preview" src="index.html#" alt="Предпросмотр изображения" class="image-preview">
+                            <div class="upload-loading-overlay" id="upload-loading-overlay" style="display: none;">
+                                <div class="spinner"></div>
+                                <span>Обработка...</span>
+                            </div>
+                            <button type="button" class="remove-preview-btn" id="remove-preview-btn">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="max-px-slider" class="setting-label">
+                                <span>Разрешение сжатия</span>
+                                <span class="setting-val" id="max-px-val">40 px</span>
+                            </label>
+                            <input type="range" id="max-px-slider" name="max_px" min="5" max="100" value="40"
+                                class="range-slider">
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="instrument-select" class="setting-label">Инструмент</label>
+                            <div class="select-wrapper">
+                                <select id="instrument-select" name="instrument" class="custom-select">
+                                    <option value="0" selected>Акустическое пианино</option>
+                                    <option value="10">Музыкальная шкатулка</option>
+                                    <option value="19">Церковный орган</option>
+                                    <option value="24">Акустическая гитара</option>
+                                    <option value="48">Скрипичный ансамбль</option>
+                                    <option value="62">Синтезаторный духовой</option>
+                                    <option value="89">Теплый космический пад</option>
+                                    <option value="103">Научно-фантастический эффект</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn magnetic" id="submit-btn">
+                        <span>Начать конвертацию</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- History of Converted Files Panel -->
+            <div class="history-container" id="history-container">
+                <div class="history-header">
+                    <h2 class="history-title">История файлов</h2>
+                    <button type="button" class="clear-history-btn" id="clear-history-btn">Очистить</button>
+                </div>
+                <div class="history-list" id="history-list">
+                    <!-- Dynamic entries will be placed here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- MIDI Preview and Piano Roll Section -->
+        <section id="preview-section" class="preview-section" style="display: none;">
+            <div class="preview-card">
+                <div class="preview-header">
+                    <div class="preview-title-block" style="display: flex; align-items: center; gap: 0.75rem;">
+                        <img id="visualizer-preview-img" src="index.html"
+                            style="width: 48px; height: 48px; border-radius: 6px; object-fit: contain; background: #000; border: 1px solid var(--card-border); image-rendering: pixelated; image-rendering: crisp-edges; display: none;"
+                            alt="Превью">
+                        <div>
+                            <span class="badge">Музыка</span>
+                            <h2 class="preview-title" id="preview-filename">Название трека</h2>
+                        </div>
+                    </div>
+                    <div class="preview-actions"
+                        style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <button id="download-audio-btn" class="download-link-btn"
+                            style="background: var(--primary-color); color: var(--primary-text); border-color: var(--primary-color);">Скачать
+                            Аудио</button>
+                        <a id="download-midi-btn" href="index.html#" class="download-link-btn" download>Скачать MIDI</a>
+                    </div>
+                </div>
+
+                <!-- Web MIDI Synthesizer Player UI -->
+                <div class="midi-player-ui">
+                    <div class="player-controls">
+                        <button id="playback-play" class="control-btn" title="Воспроизвести / Пауза">
+                            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M8 5v14l11-7z" fill="currentColor" />
+                            </svg>
+                            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button id="playback-stop" class="control-btn" title="Остановить">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 6h12v12H6V6z" fill="currentColor" />
+                            </svg>
+                        </button>
+
+                        <div class="progress-container">
+                            <span class="time-label" id="current-time">0:00</span>
+                            <div class="progress-bar-bg" id="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                            </div>
+                            <span class="time-label" id="total-time">0:00</span>
+                        </div>
+
+                        <div class="volume-control">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"
+                                    fill="currentColor" />
+                            </svg>
+                            <input type="range" id="volume-control-slider" min="0" max="1" step="0.05" value="0.5"
+                                class="volume-slider">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MIDI Piano Roll Visualizer -->
+                <div class="piano-roll-container">
+                    <canvas id="piano-roll-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about-section">
+            <h2 class="section-title">Как это работает?</h2>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-num">01</div>
+                    <h3>Сжатие</h3>
+                    <p>Масштабируем фото и считываем пиксели по очереди.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">02</div>
+                    <h3>Анализ</h3>
+                    <p>Цвет и яркость пикселя задают высоту, длительность и громкость ноты.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">03</div>
+                    <h3>Синтез</h3>
+                    <p>Создаем MIDI-файл, готовый для прослушивания и скачивания.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="app-footer">
+        <div class="footer-container">
+            <span>&copy; 2026 PixelSound.</span>
+        </div>
+    </footer>
+
+    <!-- Export Modal Overlay -->
+    <div id="export-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <button type="button" class="modal-close-btn" id="export-modal-close">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z"
+                        fill="currentColor" />
+                </svg>
+            </button>
+
+            <!-- Step 1: Format Selection -->
+            <div id="export-step-select" class="modal-step">
+                <h3 class="modal-title">Выберите формат аудио</h3>
+                <p class="modal-subtitle">Экспортируйте визуализацию в звуковой файл</p>
+                <div class="format-options">
+                    <div class="format-card" id="format-wav">
+                        <div class="format-icon">WAV</div>
+                        <div class="format-info">
+                            <span class="format-name">WAV (Мгновенно)</span>
+                            <span class="format-desc">Высокое качество, без сжатия, мгновенный рендеринг</span>
+                        </div>
+                    </div>
+                    <div class="format-card" id="format-mp3">
+                        <div class="format-icon">MP3</div>
+                        <div class="format-info">
+                            <span class="format-name">MP3 (Сжатый)</span>
+                            <span class="format-desc">Меньший размер файла, сжатие звука (займет несколько
+                                секунд)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Progress Indicator -->
+            <div id="export-step-progress" class="modal-step" style="display: none;">
+                <h3 class="modal-title" id="export-progress-title">Экспорт аудио...</h3>
+                <div class="modal-progress-container">
+                    <div class="modal-progress-bar-bg">
+                        <div class="modal-progress-bar-fill" id="export-progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <span class="modal-progress-label" id="export-progress-label">0%</span>
+                </div>
+                <p class="modal-status-text" id="export-status-text">Подготовка к рендерингу...</p>
+            </div>
+
+            <!-- Step 3: Success -->
+            <div id="export-step-success" class="modal-step" style="display: none;">
+                <div class="success-icon-container">
+                    <svg class="success-checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="success-checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                        <path class="success-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                    </svg>
+                </div>
+                <h3 class="modal-title" style="text-align: center;">Готово!</h3>
+                <p class="modal-subtitle" style="text-align: center; margin-bottom: 0;">Файл скачивается на ваше
+                    устройство.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.all.min.js" crossorigin="anonymous"></script>
+    <script src="static/app.js"></script>
+</body>
+
+</html>
